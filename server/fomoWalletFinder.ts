@@ -2,8 +2,7 @@ import type { Trader } from './types.js';
 
 const DEFAULT_TERMS = [
   'pnl', 'profit', 'gem', 'ape', 'pump', 'moon', 'sol', 'degen', 'alpha', 'sniper',
-  'cash', 'bag', 'whale', 'frog', 'pepe', 'bonk', 'token', 'buy', 'sell', 'trader',
-  'smart', 'ray', 'goat', 'cult', 'chad', 'hunter', 'wallet', 'king', 'coin'
+  'cash', 'bag', 'whale', 'frog', 'pepe', 'bonk', 'token', 'buy'
 ];
 
 type SearchUser = {
@@ -30,7 +29,23 @@ type FinderUser = {
   };
 };
 
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+async function fetchJson<T>(url: string, timeoutMs = 7000): Promise<T | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      headers: { Accept: 'application/json' },
+      signal: controller.signal
+    });
+    if (!response.ok) return null;
+    return await response.json() as T;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 function numberFrom(value: unknown): number {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -102,39 +117,31 @@ export async function discoverPublicTraders(options: {
   const terms = options.terms?.length ? options.terms : DEFAULT_TERMS;
   const found = new Map<string, SearchUser>();
 
-  for (const term of terms) {
-    if (term.length < 3) continue;
+  await Promise.all(terms.map(async (term) => {
+    if (term.length < 3) return;
     const url = `${options.apiBase}/search?q=${encodeURIComponent(term)}&limit=10`;
-    const response = await fetch(url, { headers: { Accept: 'application/json' } });
-    if (response.ok) {
-      const payload = await response.json() as { results?: SearchUser[] };
-      for (const user of payload.results ?? []) {
-        const followers = user.followersCount;
-        if (typeof followers === 'number' && followers >= options.minFollowers && followers <= options.maxFollowers) {
-          found.set(user.username.toLowerCase(), user);
-        }
+    const payload = await fetchJson<{ results?: SearchUser[] }>(url);
+    for (const user of payload?.results ?? []) {
+      const followers = user.followersCount;
+      if (typeof followers === 'number' && followers >= options.minFollowers && followers <= options.maxFollowers) {
+        found.set(user.username.toLowerCase(), user);
       }
     }
-    await wait(1050);
-  }
+  }));
+
+  const details = await Promise.all([...found.values()].slice(0, options.limit * 3).map(async (user) => {
+    const url = `${options.apiBase}/get-user/${encodeURIComponent(user.username.toLowerCase())}`;
+    const payload = await fetchJson<{ user?: FinderUser }>(url);
+    return payload?.user ? { user, details: payload.user } : null;
+  }));
 
   const traders: Trader[] = [];
-  for (const user of found.values()) {
-    const url = `${options.apiBase}/get-user/${encodeURIComponent(user.username.toLowerCase())}`;
-    const response = await fetch(url, { headers: { Accept: 'application/json' } });
-    if (!response.ok) {
-      await wait(1050);
-      continue;
-    }
-    const payload = await response.json() as { user?: FinderUser };
-    const details = payload.user;
-    if (!details) continue;
+  for (const result of details) {
+    if (!result) continue;
+    const { user, details } = result;
 
     const trades = numberFrom(details.fomoStats?.numTrades);
-    if (trades < options.minTrades) {
-      await wait(1050);
-      continue;
-    }
+    if (trades < options.minTrades) continue;
 
     const base = {
       handle: details.username ?? user.username,
@@ -149,7 +156,6 @@ export async function discoverPublicTraders(options: {
       evmWallet: details.wallets?.evm?.address ?? null
     };
     traders.push({ ...base, ...scoreTrader(base) });
-    await wait(1050);
   }
 
   return traders
