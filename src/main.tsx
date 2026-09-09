@@ -189,8 +189,8 @@ function App() {
 
         <section className="surface launch-surface">
           <div className="section-head">
-            <h2><Rocket size={18} /> Monedas lanzadas ahora</h2>
-            <span>DexScreener latest pairs</span>
+            <h2><Rocket size={18} /> Coins de Fomo lanzadas ahora</h2>
+            <span>Fomo/Long en DexScreener</span>
           </div>
           <div className="launch-list">
             {(data?.launches ?? []).map((token) => (
@@ -214,7 +214,7 @@ function App() {
                 <span className={`risk ${token.risk}`}>Riesgo {token.risk}</span>
               </article>
             ))}
-            {!loading && data?.launches.length === 0 && <p className="empty">No aparecieron lanzamientos con esos filtros.</p>}
+            {!loading && data?.launches.length === 0 && <p className="empty">No aparecieron coins de Fomo/Long con esos filtros.</p>}
           </div>
         </section>
 

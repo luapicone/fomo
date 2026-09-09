@@ -40,6 +40,7 @@ export async function runScan(config: {
     scanNewLaunches(config.dexScreenerApi, {
       maxAgeHours: config.maxLaunchAgeHours ?? 6,
       minLiquidityUsd: config.minLaunchLiquidityUsd ?? 2_500,
+      fomoOnly: true,
       limit: 30
     }).catch((error) => {
       warnings.push(`No se pudo escanear lanzamientos recientes: ${error instanceof Error ? error.message : String(error)}`);

@@ -22,6 +22,9 @@ type DexPair = {
 type TokenProfile = {
   chainId?: string;
   tokenAddress?: string;
+  url?: string;
+  description?: string;
+  links?: Array<{ label?: string; type?: string; url?: string }>;
 };
 
 function asNumber(value: unknown): number | null {
@@ -230,14 +233,35 @@ async function fetchPairsForProfiles(apiBase: string, profiles: TokenProfile[]):
   return pairs;
 }
 
+function isFomoLaunchProfile(profile: TokenProfile): boolean {
+  const text = [
+    profile.chainId,
+    profile.url,
+    profile.description,
+    ...(profile.links ?? []).flatMap((link) => [link.label, link.type, link.url])
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  return (
+    text.includes('fomo') ||
+    text.includes('longtraders') ||
+    text.includes('long your favorite traders') ||
+    text.includes('fomo leaderboard')
+  );
+}
+
 export async function scanNewLaunches(apiBase: string, options: {
   maxAgeHours?: number;
   minLiquidityUsd?: number;
+  fomoOnly?: boolean;
   limit?: number;
 } = {}): Promise<LaunchSignal[]> {
   const maxAgeMs = (options.maxAgeHours ?? 6) * 60 * 60 * 1000;
   const minLiquidityUsd = options.minLiquidityUsd ?? 2_500;
   const limit = options.limit ?? 30;
+  const fomoOnly = options.fomoOnly ?? true;
 
   const profileResponse = await fetch(`${apiBase}/token-profiles/latest/v1`, {
     headers: { Accept: 'application/json' }
@@ -245,7 +269,8 @@ export async function scanNewLaunches(apiBase: string, options: {
   if (!profileResponse.ok) return [];
 
   const profiles = await profileResponse.json() as TokenProfile[];
-  const pairs = await fetchPairsForProfiles(apiBase, profiles.slice(0, 90));
+  const selectedProfiles = fomoOnly ? profiles.filter(isFomoLaunchProfile) : profiles;
+  const pairs = await fetchPairsForProfiles(apiBase, selectedProfiles.slice(0, 90));
   const now = Date.now();
   const bestByToken = new Map<string, LaunchSignal>();
 

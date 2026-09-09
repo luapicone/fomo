@@ -7,7 +7,7 @@ Scanner para detectar traders chicos de Fomo y tokens cripto con momentum. El MV
 - Busca traders con bajo follower count, por defecto entre 20 y 80 followers.
 - Enriquecer perfiles con trades totales, volumen, wallets verificadas y ritmo lifetime de trades/dia.
 - Escanea tokens en DexScreener y calcula un score de tendencia por liquidez, volumen, momentum y market cap.
-- Lista monedas lanzadas ahora usando perfiles/pairs recientes de DexScreener, con edad del par, liquidez, volumen 5m y compras/ventas.
+- Lista coins de Fomo/Long lanzadas ahora usando perfiles/pairs recientes de DexScreener, con edad del par, liquidez, volumen 5m y compras/ventas.
 - Muestra todo en un dashboard local con refresh manual.
 - Expone una API local para automatizar alertas o integraciones.
 
@@ -15,6 +15,7 @@ Scanner para detectar traders chicos de Fomo y tokens cripto con momentum. El MV
 
 - `Fomo Wallet Finder`: busqueda publica de usuarios, followers, wallets y estadisticas basicas.
 - `DexScreener`: pares/tokens con precio, liquidez, volumen y cambios.
+- `DexScreener token profiles`: lanzamientos marcados explicitamente como Fomo/Long.
 - `Fomo API`: opcional. Requiere `FOMO_AUTH_TOKEN` de una sesion propia.
 
 ## Limitacion actual
