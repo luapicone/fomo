@@ -1,6 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { Activity, AlertTriangle, BarChart3, ExternalLink, RefreshCw, Search, Shield, Signal, Users, Wallet } from 'lucide-react';
+import { Activity, AlertTriangle, BarChart3, ExternalLink, RefreshCw, Rocket, Search, Shield, Signal, Users, Wallet } from 'lucide-react';
 import './styles.css';
 
 type Trader = {
@@ -36,11 +36,27 @@ type TokenSignal = {
   reasons: string[];
 };
 
+type LaunchSignal = TokenSignal & {
+  pairAddress: string;
+  dexId: string | null;
+  pairCreatedAt: string | null;
+  ageMinutes: number | null;
+  volume5m: number;
+  txns5m: number;
+  buys5m: number;
+  sells5m: number;
+  txns1h: number;
+  buys1h: number;
+  sells1h: number;
+  launchStatus: 'fresh' | 'active' | 'extended' | 'unknown';
+};
+
 type ScanResult = {
   generatedAt: string;
   mode: 'public' | 'fomo-auth';
   traders: Trader[];
   tokens: TokenSignal[];
+  launches: LaunchSignal[];
   warnings: string[];
   cached?: boolean;
 };
@@ -55,6 +71,12 @@ const compact = (value: number | null | undefined) => {
   return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2, notation: 'compact' }).format(value);
 };
 
+const age = (minutes: number | null | undefined) => {
+  if (minutes === null || minutes === undefined) return 'n/a';
+  if (minutes < 60) return `${minutes}m`;
+  return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+};
+
 function ScorePill({ score }: { score: number }) {
   return <span className={score >= 75 ? 'pill hot' : score >= 55 ? 'pill warm' : 'pill'}>{score}/100</span>;
 }
@@ -63,7 +85,13 @@ function App() {
   const [data, setData] = React.useState<ScanResult | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [filters, setFilters] = React.useState({ minFollowers: 20, maxFollowers: 80, minTrades: 10 });
+  const [filters, setFilters] = React.useState({
+    minFollowers: 20,
+    maxFollowers: 80,
+    minTrades: 10,
+    maxLaunchAgeHours: 6,
+    minLaunchLiquidityUsd: 2500
+  });
 
   const load = React.useCallback(async (refresh = false) => {
     setLoading(true);
@@ -72,6 +100,8 @@ function App() {
       minFollowers: String(filters.minFollowers),
       maxFollowers: String(filters.maxFollowers),
       minTrades: String(filters.minTrades),
+      maxLaunchAgeHours: String(filters.maxLaunchAgeHours),
+      minLaunchLiquidityUsd: String(filters.minLaunchLiquidityUsd),
       ...(refresh ? { refresh: '1' } : {})
     });
     try {
@@ -114,6 +144,14 @@ function App() {
             Min trades
             <input type="number" value={filters.minTrades} onChange={(event) => setFilters({ ...filters, minTrades: Number(event.target.value) })} />
           </label>
+          <label>
+            Lanzamientos ultimas horas
+            <input type="number" value={filters.maxLaunchAgeHours} onChange={(event) => setFilters({ ...filters, maxLaunchAgeHours: Number(event.target.value) })} />
+          </label>
+          <label>
+            Liquidez min lanzamiento
+            <input type="number" value={filters.minLaunchLiquidityUsd} onChange={(event) => setFilters({ ...filters, minLaunchLiquidityUsd: Number(event.target.value) })} />
+          </label>
           <button className="primary" onClick={() => void load(true)} disabled={loading}>
             <RefreshCw size={15} className={loading ? 'spin' : ''} />
             Escanear
@@ -145,7 +183,39 @@ function App() {
         <section className="metrics">
           <div><span>Traders</span><strong>{data?.traders.length ?? 0}</strong></div>
           <div><span>Tokens</span><strong>{data?.tokens.length ?? 0}</strong></div>
+          <div><span>Lanzamientos</span><strong>{data?.launches.length ?? 0}</strong></div>
           <div><span>Watchlist</span><strong>{data?.traders.filter((trader) => trader.status === 'watch').length ?? 0}</strong></div>
+        </section>
+
+        <section className="surface launch-surface">
+          <div className="section-head">
+            <h2><Rocket size={18} /> Monedas lanzadas ahora</h2>
+            <span>DexScreener latest pairs</span>
+          </div>
+          <div className="launch-list">
+            {(data?.launches ?? []).map((token) => (
+              <article className="launch-row" key={`${token.chainId}:${token.pairAddress}`}>
+                <div className="token-main">
+                  <div>
+                    <a href={token.url} target="_blank" rel="noreferrer">{token.symbol}<ExternalLink size={12} /></a>
+                    <span>{token.name} · {token.chainId}{token.dexId ? ` / ${token.dexId}` : ''}</span>
+                  </div>
+                  <ScorePill score={token.score} />
+                </div>
+                <div className="launch-stats">
+                  <span>Edad <strong>{age(token.ageMinutes)}</strong></span>
+                  <span>Liq <strong>{money(token.liquidityUsd)}</strong></span>
+                  <span>MC <strong>{money(token.marketCap)}</strong></span>
+                  <span>Vol 5m <strong>{money(token.volume5m)}</strong></span>
+                  <span>Tx 5m <strong>{token.txns5m}</strong></span>
+                  <span>B/S 1h <strong>{token.buys1h}/{token.sells1h}</strong></span>
+                </div>
+                <p>{token.reasons.slice(0, 4).join(' · ')}</p>
+                <span className={`risk ${token.risk}`}>Riesgo {token.risk}</span>
+              </article>
+            ))}
+            {!loading && data?.launches.length === 0 && <p className="empty">No aparecieron lanzamientos con esos filtros.</p>}
+          </div>
         </section>
 
         <section className="grid">

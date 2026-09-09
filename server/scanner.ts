@@ -1,5 +1,5 @@
 import { discoverPublicTraders } from './fomoWalletFinder.js';
-import { scanTrendingTokens } from './dexScreener.js';
+import { scanNewLaunches, scanTrendingTokens } from './dexScreener.js';
 import { getFomoAuthStatus } from './fomoClient.js';
 import type { ScanResult } from './types.js';
 
@@ -10,6 +10,8 @@ export async function runScan(config: {
   minFollowers?: number;
   maxFollowers?: number;
   minTrades?: number;
+  maxLaunchAgeHours?: number;
+  minLaunchLiquidityUsd?: number;
 }): Promise<ScanResult> {
   const warnings: string[] = [];
   const auth = await getFomoAuthStatus(config.fomoAuthToken).catch((error) => ({
@@ -20,7 +22,7 @@ export async function runScan(config: {
 
   if (!auth.ok) warnings.push(auth.message);
 
-  const [traders, tokens] = await Promise.all([
+  const [traders, tokens, launches] = await Promise.all([
     discoverPublicTraders({
       apiBase: config.fomoWalletFinderApi,
       minFollowers: config.minFollowers ?? 20,
@@ -34,6 +36,14 @@ export async function runScan(config: {
     scanTrendingTokens(config.dexScreenerApi).catch((error) => {
       warnings.push(`No se pudo escanear DexScreener: ${error instanceof Error ? error.message : String(error)}`);
       return [];
+    }),
+    scanNewLaunches(config.dexScreenerApi, {
+      maxAgeHours: config.maxLaunchAgeHours ?? 6,
+      minLiquidityUsd: config.minLaunchLiquidityUsd ?? 2_500,
+      limit: 30
+    }).catch((error) => {
+      warnings.push(`No se pudo escanear lanzamientos recientes: ${error instanceof Error ? error.message : String(error)}`);
+      return [];
     })
   ]);
 
@@ -42,6 +52,7 @@ export async function runScan(config: {
     mode: auth.ok ? 'fomo-auth' : 'public',
     traders,
     tokens,
+    launches,
     warnings
   };
 }

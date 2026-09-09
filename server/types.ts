@@ -33,10 +33,26 @@ export type TokenSignal = {
   reasons: string[];
 };
 
+export type LaunchSignal = TokenSignal & {
+  pairAddress: string;
+  dexId: string | null;
+  pairCreatedAt: string | null;
+  ageMinutes: number | null;
+  volume5m: number;
+  txns5m: number;
+  buys5m: number;
+  sells5m: number;
+  txns1h: number;
+  buys1h: number;
+  sells1h: number;
+  launchStatus: 'fresh' | 'active' | 'extended' | 'unknown';
+};
+
 export type ScanResult = {
   generatedAt: string;
   mode: 'public' | 'fomo-auth';
   traders: Trader[];
   tokens: TokenSignal[];
+  launches: LaunchSignal[];
   warnings: string[];
 };

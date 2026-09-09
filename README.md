@@ -7,6 +7,7 @@ Scanner para detectar traders chicos de Fomo y tokens cripto con momentum. El MV
 - Busca traders con bajo follower count, por defecto entre 20 y 80 followers.
 - Enriquecer perfiles con trades totales, volumen, wallets verificadas y ritmo lifetime de trades/dia.
 - Escanea tokens en DexScreener y calcula un score de tendencia por liquidez, volumen, momentum y market cap.
+- Lista monedas lanzadas ahora usando perfiles/pairs recientes de DexScreener, con edad del par, liquidez, volumen 5m y compras/ventas.
 - Muestra todo en un dashboard local con refresh manual.
 - Expone una API local para automatizar alertas o integraciones.
 
@@ -53,6 +54,8 @@ Parametros:
 - `minFollowers`: minimo de followers.
 - `maxFollowers`: maximo de followers.
 - `minTrades`: minimo de trades totales.
+- `maxLaunchAgeHours`: ventana maxima de edad para monedas recien lanzadas. Default: `6`.
+- `minLaunchLiquidityUsd`: liquidez minima para lanzamientos. Default: `2500`.
 - `refresh=1`: ignora cache local de 5 minutos.
 
 ## Siguiente capa

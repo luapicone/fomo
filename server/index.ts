@@ -32,7 +32,9 @@ app.get('/api/scan', async (req, res) => {
     ...config,
     minFollowers: Number(req.query.minFollowers ?? 20),
     maxFollowers: Number(req.query.maxFollowers ?? 80),
-    minTrades: Number(req.query.minTrades ?? 10)
+    minTrades: Number(req.query.minTrades ?? 10),
+    maxLaunchAgeHours: Number(req.query.maxLaunchAgeHours ?? 6),
+    minLaunchLiquidityUsd: Number(req.query.minLaunchLiquidityUsd ?? 2500)
   });
   cache = { data, expiresAt: Date.now() + 5 * 60_000 };
   res.json({ ...data, cached: false });
